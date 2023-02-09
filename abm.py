@@ -1,11 +1,16 @@
 import numpy as np
 from scipy.spatial.distance import cdist, pdist,squareform
 import matplotlib.pyplot as plt
-# Todo make class: initial conditions are outside and given when defining model with parameters in init
-# set random seeds
+import imageio.v2 as imageio
+import os.path
+
+mypath = os.path.abspath(os.path.dirname(__file__))
+imgpath = os.path.join(mypath, 'img')
+makegifpath = os.path.join(imgpath, 'makegif')
 
 
-def init(N):
+def init(N,seed = 0):
+    np.random.seed(seed)
     M = 2
     L = 4
 
@@ -170,7 +175,8 @@ class opinions:
 
         return x,y,z,C
     
-    def run(self,timesteps = 200):
+    def run(self,timesteps = 200, seed=0):
+        np.random.seed(seed)
         x=self.x0
         xs = [x]
         y=self.y0
@@ -189,7 +195,8 @@ class opinions:
 
         return xs,ys,zs,Cs  
 
-    def plotsnapshot(self, x, y, z, B, C,title=""):
+    def plotsnapshot(self, x, y, z, B, C,title="",save = False, path = imgpath+"\snapshot.jpg"):
+        fig,ax = plt.subplots()
 
         colors = ["#44AA99","#DDCC77","#CC6677","#88CCEE", "#9467bd", "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf"]
         if np.size(colors)<self.L:
@@ -197,25 +204,41 @@ class opinions:
         markers = ["o", "^", "D", "+"]
         if np.size(markers)<self.M:
             "There are not enough markers specified for the number of media."
-
-
-        plt.figure()
+        
         for l in range(self.L):
-            plt.scatter(z[l,0], z[l,1],c=colors[l], s = 40,edgecolor='k')
+            ax.scatter(z[l,0], z[l,1],c=colors[l], s = 40,edgecolor='k')
         for m in range(self.M):
-            plt.scatter(y[m,0], y[m,1],marker = markers[m], c='k', s = 40)
+            ax.scatter(y[m,0], y[m,1],marker = markers[m], c='k', s = 40)
 
         for l in range(self.L):
             for m in range(self.M):
                 indices = np.where(B[:,m]*C[:,l]==1) # of individuals that are attached to influencer l and medium m
-                plt.scatter(x[indices,0],x[indices,1], c=colors[l], marker = markers[m], s = 20,alpha=0.8)
+                ax.scatter(x[indices,0],x[indices,1], c=colors[l], marker = markers[m], s = 20,alpha=0.8)
         plt.xlim(self.domain[0,:])
         plt.ylim(self.domain[1,:])
-        plt.title("title")
-        plt.show()
+        plt.title(title)
+        if save==True:
+            fig.savefig(path, format='jpg', dpi=200, bbox_inches='tight')
 
-N = 30
-x0,y0,z0,A,B,C0 = init(N)
+        plt.close()
+    
+    def makegif(self,xs,ys,zs,Cs,stepsize = 5,fps = 5):
+        gif_path = imgpath+"\\realization.gif"
+        frames_path = makegifpath+"\{i}.jpg"
+
+        times = range(0,np.size(xs,0),stepsize)
+
+        for i in times:
+            self.plotsnapshot(xs[i], ys[i], zs[i], self.B, Cs[i],title="t = "+str(np.round(self.dt*i,2)),save=True, path = frames_path.format(i=i))
+ 
+        with imageio.get_writer(gif_path , mode='I',fps = fps) as writer:
+            for i in times:
+                writer.append_data(imageio.imread(frames_path.format(i=i)))
+
+
+N = 250
+x0,y0,z0,A,B,C0 = init(N,seed=2)
 ops = opinions(x0,y0,z0,A,B,C0,N=N)
-xs,ys,zs,Cs = ops.run(timesteps=100)
-ops.plotsnapshot(xs[-1],ys[-1],zs[-1],B, Cs[-1])
+xs,ys,zs,Cs = ops.run(timesteps=200,seed=3)
+ops.plotsnapshot(xs[-1],ys[-1],zs[-1],B, Cs[-1],save=True)
+ops.makegif(xs,ys,zs,Cs,stepsize=2)
