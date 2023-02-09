@@ -13,42 +13,35 @@ def init(N,seed = 0):
     np.random.seed(seed)
     M = 2
     L = 4
-
     # individuals' opinions
-    x = np.random.rand(N,2)*4 -2 
+    x0 = np.random.rand(N,2)*4 -2 
     # media opinions
-    y = np.array([[-1., -1.],[1., 1.]])
-
+    y0 = np.array([[-1., -1.],[1., 1.]])
     # assign individuals to different influencer depending 
     # on the different quadrants they start in
-    follinf1 = [i for i in range(N) if x[i,0]>0 and x[i,1]>0]   
-    follinf2 = [i for i in range(N) if x[i,0]<=0 and x[i,1]>0]
-    follinf3 = [i for i in range(N) if x[i,0]>0 and x[i,1]<=0]
-    follinf4 = [i for i in range(N) if x[i,0]<=0 and x[i,1]<=0]
+    follinf1 = [i for i in range(N) if x0[i,0]>0 and x0[i,1]>0]   
+    follinf2 = [i for i in range(N) if x0[i,0]<=0 and x0[i,1]>0]
+    follinf3 = [i for i in range(N) if x0[i,0]>0 and x0[i,1]<=0]
+    follinf4 = [i for i in range(N) if x0[i,0]<=0 and x0[i,1]<=0]
     follinf = [follinf1, follinf2, follinf3, follinf4]
-
     # network between individuals and influencers
-    C=np.zeros((N, L))
+    C0=np.zeros((N, L))
     for i in range(L):
-        C[follinf[i],i] =1
-
+        C0[follinf[i],i] =1
     # initial opinions of influencers given by average follower opinion
-    z = np.zeros((L,2))
+    z0 = np.zeros((L,2))
     for i in range(L):
         if len(follinf[i])>0:
-            z[i,:] = x[follinf[i]].sum(axis = 0)/len(follinf[i])
-
+            z0[i,:] = x0[follinf[i]].sum(axis = 0)/len(follinf[i])
     # randomly assign medium
     B=np.zeros((N, M))
     assignedmed = np.random.choice([0,1],N)
     B[np.where(assignedmed==0), 0] = 1
     B[np.where(assignedmed==1), 1] = 1
-
     # initialization of interaction network between individuals
     # without self-interactions
     A = np.ones((N,N))-np.diag(np.ones(N))
-
-    return x,y,z,A,B,C
+    return x0,y0,z0,A,B,C0
 
 
 
@@ -177,21 +170,21 @@ class opinions:
     
     def run(self,timesteps = 200, seed=0):
         np.random.seed(seed)
-        x=self.x0
+        x=self.x0.copy()
         xs = [x]
-        y=self.y0
+        y=self.y0.copy()
         ys = [y]
-        z=self.z0
+        z=self.z0.copy()
         zs = [z]
-        C = self.C0
+        C = self.C0.copy()
         Cs = [C]
 
         for t in range(timesteps):
             x,y,z,C = self.iter(x,y,z,C)
-            xs.append(x)
-            ys.append(y)
-            zs.append(z)
-            Cs.append(C)
+            xs.append(x.copy())
+            ys.append(y.copy())
+            zs.append(z.copy())
+            Cs.append(C.copy())
 
         return xs,ys,zs,Cs  
 
@@ -236,9 +229,9 @@ class opinions:
                 writer.append_data(imageio.imread(frames_path.format(i=i)))
 
 
-N = 250
+N = 50
 x0,y0,z0,A,B,C0 = init(N,seed=2)
 ops = opinions(x0,y0,z0,A,B,C0,N=N)
-xs,ys,zs,Cs = ops.run(timesteps=200,seed=3)
-ops.plotsnapshot(xs[-1],ys[-1],zs[-1],B, Cs[-1],save=True)
-ops.makegif(xs,ys,zs,Cs,stepsize=2)
+xs,ys,zs,Cs = ops.run(timesteps=100,seed=3)
+ops.plotsnapshot(x0,y0,z0,B,C0,save=True)
+ops.makegif(xs,ys,zs,Cs,stepsize=5)
