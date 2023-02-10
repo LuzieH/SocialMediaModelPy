@@ -1,0 +1,1 @@
+Install in edible mode with ``pip install -e ."

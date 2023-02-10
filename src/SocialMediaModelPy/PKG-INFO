@@ -1,0 +1,8 @@
+Metadata-Version: 2.1
+Name: SocialMediaModelPy
+Version: 0.1.0
+Summary: An awesome package that does something
+Author: Luzie Helfmann
+Author-email: luziehelfmann@gmail.com
+
+Install in edible mode with ``pip install -e ."
