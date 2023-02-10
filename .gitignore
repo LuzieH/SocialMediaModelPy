@@ -1,1 +1,9 @@
+# created figures
 img/
+
+# environment
+.venv
+
+# compiled Python files
+src/SocialMediaModelPy/__pycache__
+

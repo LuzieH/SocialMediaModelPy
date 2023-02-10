@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 import imageio.v2 as imageio
 
 
-# todos make project
 # add test
 # time and make fast
 
