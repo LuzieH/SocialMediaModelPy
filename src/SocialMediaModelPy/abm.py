@@ -266,14 +266,15 @@ class opinions:
             "There are not enough markers specified for the number of media."
         
         for l in range(self.L):
+            for m in range(self.M):
+                indices = np.where(B[:,m]*C[:,l]==1) # of individuals that are attached to influencer l and medium m
+                ax.scatter(x[indices,0],x[indices,1], c=colors[l], marker = markers[m], s = 25,alpha=0.8)
+        
+        for l in range(self.L):
             ax.scatter(z[l,0], z[l,1],c=colors[l], s = 50,edgecolor='k')
         for m in range(self.M):
             ax.scatter(y[m,0], y[m,1],marker = markers[m], c='k', s = 50)
 
-        for l in range(self.L):
-            for m in range(self.M):
-                indices = np.where(B[:,m]*C[:,l]==1) # of individuals that are attached to influencer l and medium m
-                ax.scatter(x[indices,0],x[indices,1], c=colors[l], marker = markers[m], s = 25,alpha=0.8)
         plt.xlim(self.domain[0,:])
         plt.ylim(self.domain[1,:])
         plt.title(title)
