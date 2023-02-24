@@ -1,9 +1,0 @@
-README.md
-setup.py
-src/SocialMediaModelPy/__init__.py
-src/SocialMediaModelPy/abm.py
-src/SocialMediaModelPy.egg-info/PKG-INFO
-src/SocialMediaModelPy.egg-info/SOURCES.txt
-src/SocialMediaModelPy.egg-info/dependency_links.txt
-src/SocialMediaModelPy.egg-info/requires.txt
-src/SocialMediaModelPy.egg-info/top_level.txt

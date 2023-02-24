@@ -4,5 +4,8 @@ img/
 # environment
 .venv
 
+#pytest files
+.pytest_cache
+
 # compiled Python files
 src/SocialMediaModelPy/__pycache__
