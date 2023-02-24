@@ -20,6 +20,3 @@ def test_dimensions():
     assert np.shape(ys[-1])==(M,2), "The output dimension of y is wrong."
     assert np.shape(zs[-1])==(L,2), "The output dimension of z is wrong."
     assert np.shape(Cs[-1])==(N,L), "The output dimension of C is wrong."
-
-
-test_dimensions()

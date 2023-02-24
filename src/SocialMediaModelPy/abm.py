@@ -1,11 +1,11 @@
 import numpy as np
-from scipy.spatial.distance import cdist, pdist,squareform
+from scipy.spatial.distance import cdist, pdist, squareform
 import matplotlib.pyplot as plt
 import imageio.v2 as imageio
 
 def init(N: int, seed: int = 0):
-    """Construct initial conditions as in "Modelling opinion dynamics under the impact of 
-    influencer and media strategies." preprint arXiv:2301.13661 with 2 media and 4 influencers.
+    """Construct initial conditions as in the paper "Modelling opinion dynamics under the impact of 
+    influencer and media strategies" with M = 2 media and L = 4 influencers.
 
     Keyword arguments:
     N -- number of individuals (int)
@@ -21,16 +21,19 @@ def init(N: int, seed: int = 0):
     """
 
     np.random.seed(seed)
+
+    # number of media
     M = 2
+    # number of influencers
     L = 4
 
-    # individuals' opinions
+    # individuals' opinions are uniformly distributed in [-2,2] x [-2,2]
     x0 = np.random.rand(N,2)*4 -2 
-    # media opinions
+    # media opinions given by (-1,-1) and (1,1)
     y0 = np.array([[-1., -1.],[1., 1.]])
 
-    # assign individuals to different influencer depending 
-    # on the different quadrants they start in
+    # assign each individual to the influencer that is in the
+    # same quadrant of the opinion domain
     follinf1 = [i for i in range(N) if x0[i,0]>0 and x0[i,1]>0]   
     follinf2 = [i for i in range(N) if x0[i,0]<=0 and x0[i,1]>0]
     follinf3 = [i for i in range(N) if x0[i,0]>0 and x0[i,1]<=0]
@@ -38,34 +41,35 @@ def init(N: int, seed: int = 0):
     follinf = [follinf1, follinf2, follinf3, follinf4]
 
     # network between individuals and influencers
-    C0=np.zeros((N, L))
+    C0 = np.zeros((N, L))
     for i in range(L):
-        C0[follinf[i],i] =1
+        C0[follinf[i],i] = 1
 
-    # initial opinions of influencers given by average follower opinion
+    # initial opinion of influencer is given by the average opinion 
+    # of the individuals that follow them 
     z0 = np.zeros((L,2))
     for i in range(L):
         if len(follinf[i])>0:
             z0[i,:] = x0[follinf[i]].sum(axis = 0)/len(follinf[i])
 
-    # randomly assign medium
-    B=np.zeros((N, M))
+    # randomly assign media to individuals
+    B = np.zeros((N, M))
     assignedmed = np.random.choice([0,1],N)
-    B[np.where(assignedmed==0), 0] = 1
-    B[np.where(assignedmed==1), 1] = 1
+    B[np.where(assignedmed == 0), 0] = 1
+    B[np.where(assignedmed == 1), 1] = 1
 
-    # initialization of interaction network between individuals
-    # without self-interactions
+    # initialization of fully-connected interaction network 
+    # between individuals without self-interactions
     A = np.ones((N,N))-np.diag(np.ones(N))
 
-    return x0,y0,z0,A,B,C0
+    return x0, y0, z0, A, B, C0
 
 
 
 class opinions:
     """Class to construct, simulate and plot the opinion model with influencers and media for a given parameter set and given initial conditions.
     
-    Reference: Helfmann, Luzie, et al. "Modelling opinion dynamics under the impact of influencer and media strategies." arXiv preprint arXiv:2301.13661 (2023).
+    Reference: Helfmann, Luzie, et al. "Modelling opinion dynamics under the impact of influencer and media strategies." preprint arXiv:2301.13661 (2023).
     """
     def __init__(self,  x0: np.ndarray, y0: np.ndarray, z0: np.ndarray, A: np.ndarray, B: np.ndarray, C0: np.ndarray,
                  a: float=1., b: float=2., c: float=4., sigma: float=0.5, sigmahat: float = 0., sigmatilde: float = 0., gamma: float=10., 
@@ -134,56 +138,54 @@ class opinions:
             "The size of the adjacency matrix A does not correspond to the number of individuals N, it should be of the size N x N."
         assert np.shape(self.B) == (self.N, self.M), \
             "The shape of the matrix B should be N x M."
-        assert np.shape(self.C0)== (self.N, self.L), \
+        assert np.shape(self.C0) == (self.N, self.L), \
             "The shape of the matrix C should be N x L."
 
-    def attraction(self, weights: np.ndarray, positions: np.ndarray, neighbourpos: np.ndarray) -> np.ndarray:
-        """ Constructs the attraction force between the agents with opinions given by neighbourpos and the 
-        individuals with opinions given by positions, the weights array gives the corresponding interaction weights between 
+    def attraction(self, weights: np.ndarray, opinions: np.ndarray, neighbourops: np.ndarray) -> np.ndarray:
+        """ Constructs the attraction force between the agents with opinions given by neighbourops and the 
+        individuals with opinions given by opinions, the weights array gives the corresponding interaction weights between 
         each individual and each agent."""
 
         force = np.zeros((self.N,2))
         weightssum = np.sum(weights, axis=1)
-        force = weights.dot(neighbourpos)/weightssum[:,np.newaxis]
-        force[weightssum==0, :] = 0
+        force = weights.dot(neighbourops)/weightssum[:,np.newaxis]
+        # the force is zero in case an individual is not interacting with any other given agent
+        force[weightssum == 0, :] = 0 
 
-        return force-positions
+        return force-opinions
 
     def changeinfluencer(self, C: np.ndarray, B: np.ndarray, x: np.ndarray, z: np.ndarray) -> np.ndarray:
         """ Given the network between individuals and influencers, C, let individuals change their influencer according
-        to the specified change rates. Returns the new network. """
+        to the specified change rates and using the Gillespie algorithm. Returns the new network. """
 
         # fraction of individuals following a certain influencer and medium
         fraction = np.zeros((self.M,self.L))
         for i in range(self.L):
             for j in range(self.M):
                 fraction[j,i]= B[:,j].dot(C[:,i])/self.N
+        # normalized fraction
         normfraction = fraction/np.sum(fraction,axis = 0)[np.newaxis,:]
 
-        # compute distance of followers to influencers
+        # compute distance of indivdiuals to influencers
         dist = cdist(x,z,'euclidean')
-        wdist = self.psi(dist)
+        wdist = self.psi(dist) # evaluate the pair function psi on the distances
         
         changerate = np.zeros(self.L)
         for j in range(self.N):
-            # compute changerate of each influencer to individual j
+            m = int(B[j,:].dot(range(self.M))) # index of individual j's medium
+            # compute change rate that an individuals has to the different influencers
             for l in range(self.L):
-                m = int(B[j,:].dot(range(self.M))) # index of individual j's medium
-                changerate[l]= self.eta * wdist[j,l] *self.r(normfraction[m,l]) 
+                changerate[l] = self.eta * wdist[j,l] *self.r(normfraction[m,l]) 
 
-            #check whether the influencer is changed    
-            r1=np.random.rand()
+            # check whether the influencer is changed    
+            r1 = np.random.rand() 
             totalrate = np.nansum(changerate)
-            if r1<1-np.exp(-totalrate*self.dt): 
+            if r1 < 1-np.exp(-totalrate*self.dt): # a change event happens
                 prob = changerate/totalrate  
-                r2 = np.random.rand()
-                l = 1
-                while np.nansum(prob[0:l])<r2: # choose to which influencer to change to
-                    l = l+1
-
+                l = np.random.choice(range(self.L), p=prob)
                 # adapt network
                 C[j,:] = 0    
-                C[j,l-1] = 1
+                C[j,l] = 1
         return C
             
     def iter(self, x: np.ndarray,y: np.ndarray,z: np.ndarray,C: np.ndarray):
@@ -193,14 +195,15 @@ class opinions:
         for m in range(self.M):
             Nfoll = np.sum(self.B[:,m])
             if  Nfoll>0:
-                averageopinion = self.B[:,m].dot(x)/Nfoll
+                averageopinion = self.B[:,m].dot(x)/Nfoll # of followers
+                # Euler Mayurama discretization of the SDE
                 y[m,:] = y[m,:]  + (self.dt * (averageopinion -y[m,:]) + np.sqrt(self.dt)*self.sigmahat*np.random.randn(2))/self.Gamma
 
         # influencer opinions adapt slowly to opinions of followers with friction
         for l in range(self.L):
             Nfoll = np.sum(C[:,l])
             if  Nfoll>0:
-                averageopinion = C[:,l].dot(x)/Nfoll
+                averageopinion = C[:,l].dot(x)/Nfoll # of follwers
                 z[l,:] = z[l,:]  + (self.dt * (averageopinion -z[l,:]) + np.sqrt(self.dt)*self.sigmatilde*np.random.randn(2))/self.gamma    
 
         # opinions change due to attracting opinions of friends, influencers and media
@@ -294,11 +297,11 @@ class opinions:
 
         times = range(0,np.size(xs,0),stepsize)
 
-        for i in times:
-            self.plotsnapshot(xs[i], ys[i], zs[i], self.B, Cs[i],title="t = "+str(np.round(self.dt*i,2)),save=True, path = framespath, name = name.format(i=i))
+        for index, t in enumerate(times):
+            self.plotsnapshot(xs[t], ys[t], zs[t], self.B, Cs[t],title="t = "+str(np.round(self.dt*t,2)),save=True, path = framespath, name = name.format(i=index))
  
         with imageio.get_writer(gifpath , mode='I',fps = fps) as writer:
-            for i in times:
-                writer.append_data(imageio.imread(framespath+name.format(i=i)))
+            for index, t in enumerate(times):
+                writer.append_data(imageio.imread(framespath+name.format(i=index)))
 
 

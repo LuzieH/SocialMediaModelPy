@@ -1,1 +1,1 @@
-from SocialMediaModelPy import abm
+from SocialMediaModelPy import abm, test_abm
