@@ -67,9 +67,11 @@ def init(N: int, seed: int = 0):
 
 
 class opinions:
-    """Class to construct, simulate and plot the opinion model with influencers and media for a given parameter set and given initial conditions.
+    """Class to construct, simulate and plot the opinion model with influencers and media for a given 
+    parameter set and given initial conditions.
     
-    Reference: Helfmann, Luzie, et al. "Modelling opinion dynamics under the impact of influencer and media strategies." preprint arXiv:2301.13661 (2023).
+    Reference: Helfmann, Luzie, et al. "Modelling opinion dynamics under the impact of influencer and 
+    media strategies." preprint arXiv:2301.13661 (2023).
     """
     def __init__(self,  x0: np.ndarray, y0: np.ndarray, z0: np.ndarray, A: np.ndarray, B: np.ndarray, C0: np.ndarray,
                  a: float=1., b: float=2., c: float=4., sigma: float=0.5, sigmahat: float = 0., sigmatilde: float = 0., gamma: float=10., 
@@ -97,7 +99,7 @@ class opinions:
         phi -- pairwise interaction function between individuals (function)
         psi -- pairwise function when individuals evaluate the suitability of influencers (function)
         dt -- time step size (float, >=0)
-        domain -- 2D opinion domain (np.ndarray 2 x 2)
+        domain -- 2D opinion domain (np.ndarray 2 x 2) assumed to be square
         """
 
         # initial conditions
@@ -128,12 +130,6 @@ class opinions:
         self.domain = domain
 
         # consistency checks
-        assert self.N == np.size(x0,0), \
-            "The size of the initial state of individuals does not align with the parameter N."
-        assert self.M == np.size(y0,0), \
-            "The size of the initial state of media does not align with the parameter M."
-        assert self.L == np.size(z0,0), \
-            "The size of the initial state of influencers does not align with the parameter L."
         assert np.shape(self.A) == (self.N, self.N), \
             "The size of the adjacency matrix A does not correspond to the number of individuals N, it should be of the size N x N."
         assert np.shape(self.B) == (self.N, self.M), \
@@ -142,21 +138,21 @@ class opinions:
             "The shape of the matrix C should be N x L."
 
     def attraction(self, weights: np.ndarray, opinions: np.ndarray, neighbourops: np.ndarray) -> np.ndarray:
-        """ Constructs the attraction force between the agents with opinions given by neighbourops and the 
-        individuals with opinions given by opinions, the weights array gives the corresponding interaction weights between 
-        each individual and each agent."""
+        """ Constructs the attraction force on individuals with current opinion given by opinion and between other
+         agents with opinions given by neighbourops. The weights array gives the corresponding interaction weights 
+         between each individual and each agent. Returns the force."""
 
         force = np.zeros((self.N,2))
         weightssum = np.sum(weights, axis=1)
         force = weights.dot(neighbourops)/weightssum[:,np.newaxis]
-        # the force is zero in case an individual is not interacting with any other given agent
+        # the force is zero in case an individual is not interacting with any other agent
         force[weightssum == 0, :] = 0 
 
         return force-opinions
 
     def changeinfluencer(self, C: np.ndarray, B: np.ndarray, x: np.ndarray, z: np.ndarray) -> np.ndarray:
         """ Given the network between individuals and influencers, C, let individuals change their influencer according
-        to the specified change rates and using the Gillespie algorithm. Returns the new network. """
+        to the specified change rates. Returns the new network. """
 
         # fraction of individuals following a certain influencer and medium
         fraction = np.zeros((self.M,self.L))
@@ -180,8 +176,8 @@ class opinions:
             # check whether the influencer is changed    
             r1 = np.random.rand() 
             totalrate = np.nansum(changerate)
-            if r1 < 1-np.exp(-totalrate*self.dt): # a change event happens
-                prob = changerate/totalrate  
+            if r1 < 1-np.exp(-totalrate*self.dt): # a change event happens in dt-timestep
+                prob = changerate/totalrate # probabilities of changing to different influencers
                 l = np.random.choice(range(self.L), p=prob)
                 # adapt network
                 C[j,:] = 0    
@@ -189,7 +185,7 @@ class opinions:
         return C
             
     def iter(self, x: np.ndarray,y: np.ndarray,z: np.ndarray,C: np.ndarray):
-        """ One iteration of the opinion model. """
+        """ One iteration with step size dt of the opinion model. """
 
         # media opinions change very slowly based on opinions of followers with friction
         for m in range(self.M):
