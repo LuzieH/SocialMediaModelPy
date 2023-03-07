@@ -75,8 +75,9 @@ class opinions:
     """
     def __init__(self,  x0: np.ndarray, y0: np.ndarray, z0: np.ndarray, A: np.ndarray, B: np.ndarray, C0: np.ndarray,
                  a: float=1., b: float=2., c: float=4., sigma: float=0.5, sigmahat: float = 0., sigmatilde: float = 0., gamma: float=10., 
-                 Gamma: float=100., eta: float = 15., r = lambda x : np.max([0.1,-1+2*x]), phi = lambda x : np.exp(-x),
-                 psi = lambda x : np.exp(-x), dt: float = 0.01, domain: np.ndarray = np.array([[-2,2],[-2,2]])):
+                 Gamma: float=100., eta: float = 15., r = lambda x : np.max([0.1,-1+2*x]), #phi = lambda x : np.exp(-x),
+                 psi = lambda x : np.exp(-x), dt: float = 0.01, domain: np.ndarray = np.array([[-2,2],[-2,2]]), 
+                 zeta: float = 10., theta: float = 1.5): ##
         """Construct the model class with the given parameters and initial conditions.
 
         Keyword arguments:
@@ -101,7 +102,7 @@ class opinions:
         dt -- time step size (float, >=0)
         domain -- 2D opinion domain (np.ndarray 2 x 2) assumed to be square
         """
-
+        
         # initial conditions
         self.x0 = x0
         self.y0 = y0
@@ -124,10 +125,12 @@ class opinions:
         self.Gamma = Gamma 
         self.eta = eta 
         self.r = r 
-        self.phi = phi 
+        self.phi = lambda x: self.phi_(x)
         self.psi = psi 
         self.dt = dt 
         self.domain = domain
+        self.zeta = zeta ##
+        self.theta = theta ##
 
         # consistency checks
         assert np.shape(self.A) == (self.N, self.N), \
@@ -136,6 +139,9 @@ class opinions:
             "The shape of the matrix B should be N x M."
         assert np.shape(self.C0) == (self.N, self.L), \
             "The shape of the matrix C should be N x L."
+
+    def phi_(self, x):
+        return 1/(1+ np.exp(-self.zeta*(x-self.theta))) - 0.5
 
     def attraction(self, weights: np.ndarray, opinions: np.ndarray, neighbourops: np.ndarray) -> np.ndarray:
         """ Constructs the attraction force on individuals with current opinion given by opinion and between other
@@ -203,7 +209,7 @@ class opinions:
                 z[l,:] = z[l,:]  + (self.dt * (averageopinion -z[l,:]) + np.sqrt(self.dt)*self.sigmatilde*np.random.randn(2))/self.gamma    
 
         # opinions change due to attracting opinions of friends, influencers and media
-        weights = np.multiply(self.A,self.phi(squareform(pdist(x,'euclidean')))) # multiply A and phi entries element-wise
+        weights = np.multiply(self.A, self.phi(squareform(pdist(x,'euclidean')))) # multiply A and phi entries element-wise
         force = self.a* self.attraction(weights, x, x) + self.b* self.attraction(self.B, x, y) + self.c* self.attraction(C, x, z)
         x = x + self.dt*force + np.sqrt(self.dt)*self.sigma*np.random.randn(self.N,2)
 
@@ -253,7 +259,7 @@ class opinions:
         return xs,ys,zs,Cs  
 
     def plotsnapshot(self, x: np.ndarray, y: np.ndarray, z: np.ndarray, B: np.ndarray, C: np.ndarray, 
-                     path: str ="", title: str="", save: bool = False, name: str = "\snapshot.jpg"):
+                     path: str ="", title: str="", save: bool = False, name: str = "/snapshot.jpg"):
         """Plots a given snapshot of the opinion dynamics as specified by the state (x,y,z,B,C)."""
 
         fig,ax = plt.subplots()
@@ -284,13 +290,13 @@ class opinions:
         plt.close()
     
     def makegif(self, xs: np.ndarray, ys: np.ndarray, zs: np.ndarray, Cs: np.ndarray, gifpath: str="", framespath: str="", 
-                name: str ="\\realization.gif", stepsize: int = 5, fps: int = 5):
+                name: str ="/realization.gif", stepsize: int = 5, fps: int = 5):
         """ Makes a gif of the realization specified by (xs,ys,zs,Cs,B), the frames for the gif are safed in framespath while the 
         final gif is stored under gifpath+name."""
 
         gifpath = gifpath+name
         framespath = framespath
-        name = "\{i}.jpg"
+        name = "/{i}.jpg"
 
         times = range(0,np.size(xs,0),stepsize)
 
