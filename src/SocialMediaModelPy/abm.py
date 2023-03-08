@@ -62,7 +62,9 @@ def init(N: int, seed: int = 0):
     # between individuals without self-interactions
     A = np.ones((N,N))-np.diag(np.ones(N))
 
-    return x0, y0, z0, A, B, C0
+    #initialize influencer network
+    D = np.ones((L,L))-np.diag(np.ones(L)) ##
+    return x0, y0, z0, A, B, C0, D ##
 
 
 
@@ -73,11 +75,11 @@ class opinions:
     Reference: Helfmann, Luzie, et al. "Modelling opinion dynamics under the impact of influencer and 
     media strategies." preprint arXiv:2301.13661 (2023).
     """
-    def __init__(self,  x0: np.ndarray, y0: np.ndarray, z0: np.ndarray, A: np.ndarray, B: np.ndarray, C0: np.ndarray,
-                 a: float=1., b: float=2., c: float=4., sigma: float=0.5, sigmahat: float = 0., sigmatilde: float = 0., gamma: float=10., 
+    def __init__(self,  x0: np.ndarray, y0: np.ndarray, z0: np.ndarray, A: np.ndarray, B: np.ndarray, C0: np.ndarray, D: np.ndarray,
+                 a: float=1., b: float=2., d: float = 1/2, e: float = 1/2, sigma: float=0.5, sigmahat: float = 0., sigmatilde: float = 0., gamma: float=10., #c: float=4., 
                  Gamma: float=100., eta: float = 15., r = lambda x : np.max([0.1,-1+2*x]), #phi = lambda x : np.exp(-x),
                  psi = lambda x : np.exp(-x), dt: float = 0.01, domain: np.ndarray = np.array([[-2,2],[-2,2]]), 
-                 zeta: float = 10., theta: float = 1.5): ##
+                 theta: float = 1.5): ##
         """Construct the model class with the given parameters and initial conditions.
 
         Keyword arguments:
@@ -110,6 +112,7 @@ class opinions:
         self.A = A
         self.B = B
         self.C0 = C0
+        self.D = D
 
         # model parameters
         self.N = np.size(x0,0)
@@ -117,7 +120,11 @@ class opinions:
         self.L = np.size(z0,0)
         self.a = a
         self.b = b 
-        self.c = c
+        ## add error 
+        self.c = 1 - self.a - self.b ##
+        self.d = d
+        self.e = e
+
         self.sigma = sigma 
         self.sigmahat = sigmahat 
         self.sigmatilde = sigmatilde 
@@ -125,12 +132,13 @@ class opinions:
         self.Gamma = Gamma 
         self.eta = eta 
         self.r = r 
-        self.phi = lambda x: self.phi_(x)
+        self.phi = lambda x: self.phi_(x) ##
         self.psi = psi 
         self.dt = dt 
         self.domain = domain
-        self.zeta = zeta ##
+
         self.theta = theta ##
+        self.zeta = 2 * np.log(9)/ self.theta ##
 
         # consistency checks
         assert np.shape(self.A) == (self.N, self.N), \
@@ -140,19 +148,20 @@ class opinions:
         assert np.shape(self.C0) == (self.N, self.L), \
             "The shape of the matrix C should be N x L."
 
-    def phi_(self, x):
-        return 1/(1+ np.exp(-self.zeta*(x-self.theta))) - 0.5
+    def phi_(self, x): ##
+        return 1 / ( 1 + np.exp( self.zeta * ( x - self.theta ) ) ) - 0.5 ##
 
     def attraction(self, weights: np.ndarray, opinions: np.ndarray, neighbourops: np.ndarray) -> np.ndarray:
         """ Constructs the attraction force on individuals with current opinion given by opinion and between other
          agents with opinions given by neighbourops. The weights array gives the corresponding interaction weights 
          between each individual and each agent. Returns the force."""
 
-        force = np.zeros((self.N,2))
-        weightssum = np.sum(weights, axis=1)
-        force = weights.dot(neighbourops)/weightssum[:,np.newaxis]
+        #force = np.zeros((self.N,2))
+        weightssum = np.sum(abs(weights), axis=1)
+        #force = weights.dot(neighbourops)/weightssum[:,np.newaxis]
+        force = weights.dot(neighbourops)/weightssum[:,np.newaxis] ##
         # the force is zero in case an individual is not interacting with any other agent
-        force[weightssum == 0, :] = 0 
+        force[weightssum == 0, :] = 0 ##weightssum
 
         return force-opinions
 
@@ -160,7 +169,7 @@ class opinions:
         """ Given the network between individuals and influencers, C, let individuals change their influencer according
         to the specified change rates. Returns the new network. """
 
-        # fraction of individuals following a certain influencer and medium
+        # fraction of individuals following a certain influencer and media
         fraction = np.zeros((self.M,self.L))
         for i in range(self.L):
             for j in range(self.M):
@@ -177,7 +186,7 @@ class opinions:
             m = int(B[j,:].dot(range(self.M))) # index of individual j's medium
             # compute change rate that an individuals has to the different influencers
             for l in range(self.L):
-                changerate[l] = self.eta * wdist[j,l] *self.r(normfraction[m,l]) 
+                changerate[l] = self.eta * wdist[j,l] * self.r(normfraction[m,l]) 
 
             # check whether the influencer is changed    
             r1 = np.random.rand() 
@@ -190,7 +199,7 @@ class opinions:
                 C[j,l] = 1
         return C
             
-    def iter(self, x: np.ndarray,y: np.ndarray,z: np.ndarray,C: np.ndarray):
+    def iter(self, x: np.ndarray, y: np.ndarray, z: np.ndarray, C: np.ndarray, D: np.ndarray):
         """ One iteration with step size dt of the opinion model. """
 
         # media opinions change very slowly based on opinions of followers with friction
@@ -199,18 +208,24 @@ class opinions:
             if  Nfoll>0:
                 averageopinion = self.B[:,m].dot(x)/Nfoll # of followers
                 # Euler Mayurama discretization of the SDE
-                y[m,:] = y[m,:]  + (self.dt * (averageopinion -y[m,:]) + np.sqrt(self.dt)*self.sigmahat*np.random.randn(2))/self.Gamma
+                y[m,:] = y[m,:]  + (self.dt * (averageopinion - y[m,:]) + np.sqrt(self.dt)*self.sigmahat*np.random.randn(2))/self.Gamma
 
         # influencer opinions adapt slowly to opinions of followers with friction
         for l in range(self.L):
             Nfoll = np.sum(C[:,l])
             if  Nfoll>0:
                 averageopinion = C[:,l].dot(x)/Nfoll # of follwers
-                z[l,:] = z[l,:]  + (self.dt * (averageopinion -z[l,:]) + np.sqrt(self.dt)*self.sigmatilde*np.random.randn(2))/self.gamma    
+                z[l,:] = z[l,:]  + (self.dt * (averageopinion - z[l,:]) + np.sqrt(self.dt)*self.sigmatilde*np.random.randn(2))/self.gamma    
 
         # opinions change due to attracting opinions of friends, influencers and media
         weights = np.multiply(self.A, self.phi(squareform(pdist(x,'euclidean')))) # multiply A and phi entries element-wise
         force = self.a* self.attraction(weights, x, x) + self.b* self.attraction(self.B, x, y) + self.c* self.attraction(C, x, z)
+         
+        weights_inf = np.multiply(self.D,self.phi(squareform(pdist(z,'euclidean')))) # multiply D and phi entries element-wise; define earlier? 
+        force_inf = self.e*self.attraction(C,z,x) + self.d*self.attraction(weights_inf, z, z) #define earlier?
+        
+        z = z + self.dt*force_inf + np.sqrt(self.dt)*self.sigmatilde*np.random.randn(self.L,2)/self.gamma
+       
         x = x + self.dt*force + np.sqrt(self.dt)*self.sigma*np.random.randn(self.N,2)
 
         # boundary condition: don't allow agents to escape domain
@@ -221,7 +236,7 @@ class opinions:
         x[ind2] = self.domain[0,0]
 
         # individuals may change the influencer they are interacting with
-        C = self.changeinfluencer( C, self.B, x, z)
+        C = self.changeinfluencer(C, self.B, x, z)
 
         return x,y,z,C
     
@@ -259,7 +274,7 @@ class opinions:
         return xs,ys,zs,Cs  
 
     def plotsnapshot(self, x: np.ndarray, y: np.ndarray, z: np.ndarray, B: np.ndarray, C: np.ndarray, 
-                     path: str ="", title: str="", save: bool = False, name: str = "/snapshot.jpg"):
+                     path: str ="", title: str="", save: bool = False): ##
         """Plots a given snapshot of the opinion dynamics as specified by the state (x,y,z,B,C)."""
 
         fig,ax = plt.subplots()
@@ -277,7 +292,7 @@ class opinions:
                 ax.scatter(x[indices,0],x[indices,1], c=colors[l], marker = markers[m], s = 25,alpha=0.8)
         
         for l in range(self.L):
-            ax.scatter(z[l,0], z[l,1],c=colors[l], s = 50,edgecolor='k')
+            ax.scatter(z[l,0], z[l,1],c=colors[l], s = 50, edgecolor='k')
         for m in range(self.M):
             ax.scatter(y[m,0], y[m,1],marker = markers[m], c='k', s = 50)
 
@@ -285,18 +300,20 @@ class opinions:
         plt.ylim(self.domain[1,:])
         plt.title(title)
         if save==True:
+            name = "/snapshot_theta_{0}.jpg".format(self.theta) ##
             fig.savefig(path+name, format='jpg', dpi=200, bbox_inches='tight')
 
         plt.close()
     
     def makegif(self, xs: np.ndarray, ys: np.ndarray, zs: np.ndarray, Cs: np.ndarray, gifpath: str="", framespath: str="", 
-                name: str ="/realization.gif", stepsize: int = 5, fps: int = 5):
+                stepsize: int = 5, fps: int = 5): ##
         """ Makes a gif of the realization specified by (xs,ys,zs,Cs,B), the frames for the gif are safed in framespath while the 
         final gif is stored under gifpath+name."""
 
+        name = "/realization_theta_{0}.gif".format(self.theta) ##
         gifpath = gifpath+name
         framespath = framespath
-        name = "/{i}.jpg"
+        name = "/{i}_theta_" + str(self.theta) + ".jpg" ##
 
         times = range(0,np.size(xs,0),stepsize)
 
