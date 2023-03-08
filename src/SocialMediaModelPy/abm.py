@@ -3,7 +3,7 @@ from scipy.spatial.distance import cdist, pdist, squareform
 import matplotlib.pyplot as plt
 import imageio.v2 as imageio
 
-def init(N: int, seed: int = 0):
+def initialcondition(N: int, seed: int = 0):
     """Construct initial conditions as in the paper "Modelling opinion dynamics under the impact of 
     influencer and media strategies" with M = 2 media and L = 4 influencers.
 
@@ -199,7 +199,7 @@ class opinions:
                 C[j,l] = 1
         return C
             
-    def iter(self, x: np.ndarray, y: np.ndarray, z: np.ndarray, C: np.ndarray, D: np.ndarray):
+    def iter(self, x: np.ndarray, y: np.ndarray, z: np.ndarray, C: np.ndarray):
         """ One iteration with step size dt of the opinion model. """
 
         # media opinions change very slowly based on opinions of followers with friction
@@ -222,7 +222,7 @@ class opinions:
         force = self.a* self.attraction(weights, x, x) + self.b* self.attraction(self.B, x, y) + self.c* self.attraction(C, x, z)
          
         weights_inf = np.multiply(self.D,self.phi(squareform(pdist(z,'euclidean')))) # multiply D and phi entries element-wise; define earlier? 
-        force_inf = self.e*self.attraction(C,z,x) + self.d*self.attraction(weights_inf, z, z) #define earlier?
+        force_inf = self.e*self.attraction(C.T,z,x) + self.d*self.attraction(weights_inf, z, z) #define earlier?
         
         z = z + self.dt*force_inf + np.sqrt(self.dt)*self.sigmatilde*np.random.randn(self.L,2)/self.gamma
        
@@ -274,7 +274,7 @@ class opinions:
         return xs,ys,zs,Cs  
 
     def plotsnapshot(self, x: np.ndarray, y: np.ndarray, z: np.ndarray, B: np.ndarray, C: np.ndarray, 
-                     path: str ="", title: str="", save: bool = False): ##
+                     path: str ="", title: str="", save: bool = False,name: str = "/snapshot.jpg"): ##
         """Plots a given snapshot of the opinion dynamics as specified by the state (x,y,z,B,C)."""
 
         fig,ax = plt.subplots()
@@ -300,7 +300,7 @@ class opinions:
         plt.ylim(self.domain[1,:])
         plt.title(title)
         if save==True:
-            name = "/snapshot_theta_{0}.jpg".format(self.theta) ##
+            #name = "/snapshot.jpg"##
             fig.savefig(path+name, format='jpg', dpi=200, bbox_inches='tight')
 
         plt.close()
@@ -310,10 +310,10 @@ class opinions:
         """ Makes a gif of the realization specified by (xs,ys,zs,Cs,B), the frames for the gif are safed in framespath while the 
         final gif is stored under gifpath+name."""
 
-        name = "/realization_theta_{0}.gif".format(self.theta) ##
+        name = "/realization.gif"#
         gifpath = gifpath+name
         framespath = framespath
-        name = "/{i}_theta_" + str(self.theta) + ".jpg" ##
+        name = "/{i}.jpg" ##
 
         times = range(0,np.size(xs,0),stepsize)
 
