@@ -73,7 +73,7 @@ class opinions:
                  a: float=1., d: float = 1/2, sigma: float=0.5, sigmatilde: float = 0., gamma: float=10., #c: float=4., 
                  eta: float = 15.,  psi = lambda x : np.exp(-x), dt: float = 0.01, 
                  domain: np.ndarray = np.array([[-2,2],[-2,2]]), 
-                 theta: float = 1.5): ##
+                 theta_ind: float = 1.5, theta_inf: float = 0.5): ##
         """Construct the model class with the given parameters and initial conditions.
 
         Keyword arguments:
@@ -121,10 +121,12 @@ class opinions:
         self.psi = psi 
         self.dt = dt 
         self.domain = domain
-
-        self.theta = theta ##
-        self.zeta = 2 * np.log(9)/ self.theta ##
-
+        
+        self.theta_ind = theta_ind
+        self.theta_inf = theta_inf ##
+        self.zeta_ind = 2 * np.log(9)/ self.theta_ind
+        self.zeta_inf = 2 * np.log(9)/ self.theta_inf##
+        
         # consistency checks
         assert np.shape(self.A) == (self.N, self.N), \
             "The size of the adjacency matrix A does not correspond to the number of individuals N, it should be of the size N x N."
@@ -136,8 +138,16 @@ class opinions:
             a = 1
             
 
-    def phi(self, x):
-        return 1 / ( 1 + np.exp( self.zeta * ( x - self.theta ) ) ) - 0.5 
+    def phi_ind(self, x):
+        return 1 / ( 1 + np.exp( self.zeta_ind * ( x - self.theta_ind ) ) ) - 0.5 
+        #return np.exp(-0.5*x)-0.2
+        #P = np.zeros(np.shape(x))
+        #P[x<=0.8] = 1
+        #P[x>=4] = -1
+        #return P
+        
+    def phi_inf(self, x):
+        return 1 / ( 1 + np.exp( self.zeta_inf * ( x - self.theta_inf ) ) ) - 0.5 
         #return np.exp(-0.5*x)-0.2
         #P = np.zeros(np.shape(x))
         #P[x<=0.8] = 1
@@ -188,11 +198,11 @@ class opinions:
         """ One iteration with step size dt of the opinion model. """
 
         # opinions change due to attracting opinions of friends, influencers and media
-        weights = np.multiply(self.A, self.phi(squareform(pdist(x,'euclidean')))) # multiply A and phi entries element-wise
+        weights = np.multiply(self.A, self.phi_ind(squareform(pdist(x,'euclidean')))) # multiply A and phi entries element-wise
         force = self.a* self.attraction(weights, x, x) + self.c* self.attraction(C, x, z)
-        
+
         #opinion changes of influencers in the direction of average follower and with attraction-repulsion to other influencers
-        weights_inf = np.multiply(self.D,self.phi(squareform(pdist(z,'euclidean')))) # multiply D and phi entries element-wise; define earlier? 
+        weights_inf = np.multiply(self.D,self.phi_inf(squareform(pdist(z,'euclidean')))) # multiply D and phi entries element-wise; define earlier? 
         force_inf = self.e*self.attraction(C.T,z,x) + self.d*self.attraction(weights_inf, z, z) #define earlier?
         
         z = z + self.dt*force_inf + np.sqrt(self.dt)*self.sigmatilde*np.random.randn(self.L,2)/self.gamma
@@ -298,23 +308,27 @@ timesteps = 500 # time steps to simulate with a stepsize of dt ##350
 a = 0.5 ##1.5
 b = 0. ##
 ##c = 0.5
-theta = 1.5
+theta_ind = 1.5
+theta_inf = 0.5
 seed = 1 # seed for random number generator
 
 # sample initial condition
 x0,y0,z0,A,B,C0,D = initialcondition(N,L, seed=seed)
 
 a_arr = np.linspace(0,1,1)
-theta_arr = np.array([0.5])#, 1.0, 1.5, 2.0])
-params_sensitivity = {"a": a_arr, "theta": theta_arr}
+theta_ind_arr = np.array([0.5])#, 1.0, 1.5, 2.0])
+theta_inf_arr = np.array([0.5])#, 1.0, 1.5, 2.0])
+params_sensitivity = {"a": a_arr, "theta_ind": theta_ind_arr, "theta_inf": theta_inf_arr}
 
 for param_key in params_sensitivity:
     for param in params_sensitivity[param_key]:
         #instantiate model with initial condition and parameters
         if param_key == "a":
-            ops = opinions(x0, y0, z0, A, B, C0,D, b=b, theta=theta, a=param) #c=c,
-        elif param_key == "theta":
-            ops = opinions(x0, y0, z0, A, B, C0,D, b=b, a=a, theta=param) #c=c,
+            ops = opinions(x0, y0, z0, A, B, C0,D, b=b, theta_ind=theta_ind, theta_inf=theta_inf, a=param) #c=c,
+        elif param_key == "theta_ind":
+             ops = opinions(x0, y0, z0, A, B, C0,D, b=b, a=a, theta_ind=param) #c=c,
+        elif param_key == "theta_inf":
+            ops = opinions(x0, y0, z0, A, B, C0,D, b=b, a=a, theta_inf=param) #c=c,
             break ##
 
         #evolve model
