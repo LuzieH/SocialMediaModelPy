@@ -1,6 +1,6 @@
 # SocialMediaModelPy
 
-Python code for the spring school in Arizona. 
+Python code for social media opinion dynamics model with influencer-influencer interactions. An attraction-repulsion mechanism is implemented. ASU 2023 Spring School.
 
 ## Usage
 

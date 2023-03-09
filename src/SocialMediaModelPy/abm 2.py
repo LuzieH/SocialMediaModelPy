@@ -104,7 +104,8 @@ class opinions:
         r -- recommender system function (function)
         theta_ind -- interaction threshold between individuals (float, >0)
         theta_inf -- interaction threshold between influencers (float, >0)
-        phi-- pairwise interaction function between individuals or between influencers (function)
+        phi_ind -- pairwise interaction function between individuals (function)
+        phi_inf -- pairwise interaction function between influencers (function)
         psi -- pairwise function when individuals evaluate the suitability of influencers (function)
         dt -- time step size (float, >=0)
         domain -- 2D opinion domain (np.ndarray 2 x 2) assumed to be square
@@ -148,8 +149,22 @@ class opinions:
             print("a is larger than 1")
             a = 1
             
-    def phi(self, x, theta: float, zeta: float):
-        return 1 / ( 1 + np.exp( zeta * ( x - theta ) ) ) - 0.5 
+
+    def phi_ind(self, x,):
+        return 1 / ( 1 + np.exp( self.zeta_ind * ( x - self.theta_ind ) ) ) - 0.5 
+        #return np.exp(-0.5*x)-0.2
+        #P = np.zeros(np.shape(x))
+        #P[x<=0.8] = 1
+        #P[x>=4] = -1
+        #return P
+        
+    def phi_inf(self, x):
+        return 1 / ( 1 + np.exp( self.zeta_inf * ( x - self.theta_inf ) ) ) - 0.5 
+        #return np.exp(-0.5*x)-0.2
+        #P = np.zeros(np.shape(x))
+        #P[x<=0.8] = 1
+        #P[x>=4] = -1
+        #return P
 
     def attraction(self, weights: np.ndarray, opinions: np.ndarray, neighbourops: np.ndarray) -> np.ndarray:
         """ Constructs the attraction force on individuals with current opinion given by opinion and between other
@@ -195,13 +210,11 @@ class opinions:
         """ One iteration with step size dt of the opinion model. """
 
         # opinions change due to attracting opinions of friends, influencers and media
-        #weights = np.multiply(self.A, self.phi_ind(squareform(pdist(x,'euclidean')))) # multiply A and phi entries element-wise
-        weights = np.multiply(self.A, self.phi(squareform(pdist(x,'euclidean')), self.theta_ind, self.zeta_ind))
+        weights = np.multiply(self.A, self.phi_ind(squareform(pdist(x,'euclidean')))) # multiply A and phi entries element-wise
         force = self.a* self.attraction(weights, x, x) + self.c* self.attraction(C, x, z)
 
         #opinion changes of influencers in the direction of average follower and with attraction-repulsion to other influencers
-        #weights_inf = np.multiply(self.D,self.phi_inf(squareform(pdist(z,'euclidean')))) # multiply D and phi entries element-wise; define earlier? 
-        weights_inf = np.multiply(self.D, self.phi(squareform(pdist(z,'euclidean')), self.theta_inf, self.zeta_inf))
+        weights_inf = np.multiply(self.D,self.phi_inf(squareform(pdist(z,'euclidean')))) # multiply D and phi entries element-wise; define earlier? 
         force_inf = self.e*self.attraction(C.T,z,x) + self.d*self.attraction(weights_inf, z, z) #define earlier?
         
         z = z + self.dt*force_inf + np.sqrt(self.dt)*self.sigmatilde*np.random.randn(self.L,2)/self.gamma
@@ -296,9 +309,9 @@ class opinions:
             for index, t in enumerate(times):
                 writer.append_data(imageio.imread(framespath+name.format(i=index)))
 
-"""
-imgpath = "/img"
-framespath = "img/frames" 
+
+imgpath = "/Users/nayelyvelez-cruz/Desktop/ABM/SocialMediaModelPy/img"
+framespath = "/Users/nayelyvelez-cruz/Desktop/ABM/SocialMediaModelPy/img/frames" 
 
 # parameters
 N = 250 # number of individuals
@@ -331,11 +344,11 @@ for param_key in params_sensitivity:
             break ##
 
         #evolve model
-        xs,zs,Cs = ops.run(timesteps=timesteps, seed=seed)
+        xs,ys,zs,Cs = ops.run(timesteps=timesteps, seed=seed)
 
         # plot a snapshot
         ops.plotsnapshot(xs[-1],zs[-1],Cs[-1],save=True,path=imgpath)
 
         # make gif
         ops.makegif(xs,zs,Cs,stepsize=10,gifpath=imgpath, framespath=framespath)
-        break """
+        break 
