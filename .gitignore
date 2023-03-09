@@ -12,4 +12,12 @@ src/SocialMediaModelPy/__pycache__
 
 .idea
 
+.DS_Store
+
 SocialMediaModelPy.egg-info
+
+SocialMediaModelPy/src/.idea
+
+SocialMediaModelPy/src/SocialMediaModelPy.egg-info
+
+SocialMediaModelPy/src/.DS_Store 

@@ -7,9 +7,9 @@ framespath = "img/frames"
 
 # parameters
 N = 250 # number of individuals
-timesteps = 1000 # time steps to simulate with a stepsize of dt ##350
+timesteps = 500 # time steps to simulate with a stepsize of dt ##350
 a = 0.5 
-theta_inf = 0.5 # repulsion: 2.5, 2, 1, 0.5 attraction: 3 , interesting 2.9
+theta_inf = 1 # repulsion: 2.5, 2, 1, 0.5 attraction: 3 , interesting 2.9
 theta_ind = 2.9
 seed = 1 # seed for random number generator
 sigma = 0.1
