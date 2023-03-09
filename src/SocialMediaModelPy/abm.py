@@ -3,7 +3,7 @@ from scipy.spatial.distance import cdist, pdist, squareform
 import matplotlib.pyplot as plt
 import imageio.v2 as imageio
 
-def initialcondition(N: int, L: int, seed: int = 0):
+def initialcondition(N: int, L: int = 4, seed: int = 0):
     """Construct initial conditions as in the paper "Modelling opinion dynamics under the impact of 
     influencer and media strategies" with M = 2 media and L = 4 influencers.
 
@@ -82,7 +82,8 @@ class opinions:
                  eta: float = 15.,  psi = lambda x : np.exp(-x), dt: float = 0.01, 
                  domain: np.ndarray = np.array([[-2,2],[-2,2]]), 
                  theta_ind: float = 1.5, theta_inf: float = 0.5,
-                 level_off: bool = False): ##
+                 level_off: bool = False,
+                 omikron_ind: float = 3.0, omikron_inf: float = 3.0): ##
         """Construct the model class with the given parameters and initial conditions.
 
         Keyword arguments:
@@ -316,62 +317,3 @@ class opinions:
             for index, t in enumerate(times):
                 writer.append_data(imageio.imread(framespath+name.format(i=index)))
 
-
-#"""
-imgpath = "./img"
-framespath = "./img/frames"
-
-# parameters
-N = 250 # number of individuals
-timesteps = 1500 # time steps to simulate with a stepsize of dt ##350
-a = 0.5
-theta_inf = 0.5 # repulsion: 2.5, 2, 1, 0.5 attraction: 3 , interesting 2.9
-theta_ind = 2.9
-seed = 1 # seed for random number generator
-sigma = 0.1
-omikron_ind = 4
-omikron_inf = 4
-level_off = True
-seed = 1 # seed for random number generator
-
-# sample initial condition
-x0,z0,A,C0,D = initialcondition(N,L = 4, seed=seed)
-
-# instantiate
-ops = opinions(x0, z0, A, C0,D, a=a, theta_inf=theta_inf,theta_ind= theta_ind,sigma=sigma)
-
-# evolve model
-xs,zs,Cs = ops.run(timesteps=timesteps, seed=seed)
-
-# make gif
-ops.makegif(xs,zs,Cs,stepsize=10,gifpath=imgpath, framespath=framespath)
-#"""
-"""
-a_arr = np.linspace(0,1,1)
-theta_ind_arr = np.array([0.5])#, 1.0, 1.5, 2.0])
-theta_inf_arr = np.array([0.5])#, 1.0, 1.5, 2.0])
-params_sensitivity = {"a": a_arr, "theta_ind": theta_ind_arr, "theta_inf": theta_inf_arr}
-
-
-
-
-for param_key in params_sensitivity:
-    for param in params_sensitivity[param_key]:
-        #instantiate model with initial condition and parameters
-        if param_key == "a":
-            ops = opinions(x0, z0, A, C0,D, theta_ind=theta_ind, theta_inf=theta_inf, a=param) #c=c,
-        elif param_key == "theta_ind":
-             ops = opinions(x0, z0, A, C0,D, a=a, theta_ind=param) #c=c,
-        elif param_key == "theta_inf":
-            ops = opinions(x0, z0, A, C0,D, a=a, theta_inf=param) #c=c,
-            break ##
-
-        #evolve model
-        xs,zs,Cs = ops.run(timesteps=timesteps, seed=seed)
-
-        # plot a snapshot
-        ops.plotsnapshot(xs[-1],zs[-1],Cs[-1],save=True,path=imgpath)
-
-        # make gif
-        ops.makegif(xs,zs,Cs,stepsize=10,gifpath=imgpath, framespath=framespath)
-        break """
