@@ -1,0 +1,17 @@
+Metadata-Version: 1.0
+Name: SocialMediaModelPy
+Version: 0.1.0
+Summary: An awesome package that does something
+Home-page: UNKNOWN
+Author: Luzie Helfmann
+Author-email: luziehelfmann@gmail.com
+License: UNKNOWN
+Description: # SocialMediaModelPy
+        
+        Python code for the spring school in Arizona. 
+        
+        ## Usage
+        
+        Install in edible mode in the SocialMediaModelPy directory with `pip install -e .`
+        Tests can be run in the command line with `pytest`.
+Platform: UNKNOWN
