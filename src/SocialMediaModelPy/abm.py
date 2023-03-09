@@ -3,7 +3,7 @@ from scipy.spatial.distance import cdist, pdist, squareform
 import matplotlib.pyplot as plt
 import imageio.v2 as imageio
 
-def initialcondition(N: int, seed: int = 0):
+def initialcondition(N: int, L: int, seed: int = 0):
     """Construct initial conditions as in the paper "Modelling opinion dynamics under the impact of 
     influencer and media strategies" with M = 2 media and L = 4 influencers.
 
@@ -25,7 +25,6 @@ def initialcondition(N: int, seed: int = 0):
     # number of media
     M = 2
     # number of influencers
-    L = 4
 
     # individuals' opinions are uniformly distributed in [-2,2] x [-2,2]
     x0 = np.random.rand(N,2)*4 -2 
@@ -34,23 +33,39 @@ def initialcondition(N: int, seed: int = 0):
 
     # assign each individual to the influencer that is in the
     # same quadrant of the opinion domain
-    follinf1 = [i for i in range(N) if x0[i,0]>0 and x0[i,1]>0]   
-    follinf2 = [i for i in range(N) if x0[i,0]<=0 and x0[i,1]>0]
-    follinf3 = [i for i in range(N) if x0[i,0]>0 and x0[i,1]<=0]
-    follinf4 = [i for i in range(N) if x0[i,0]<=0 and x0[i,1]<=0]
-    follinf = [follinf1, follinf2, follinf3, follinf4]
-
+    #follinf1 = [i for i in range(N) if x0[i,0]>0 and x0[i,1]>0]   
+    #follinf2 = [i for i in range(N) if x0[i,0]<=0 and x0[i,1]>0]
+    #follinf3 = [i for i in range(N) if x0[i,0]>0 and x0[i,1]<=0]
+    #follinf4 = [i for i in range(N) if x0[i,0]<=0 and x0[i,1]<=0]
+    #follinf = [follinf1, follinf2, follinf3, follinf4]
+    follinf = np.zeros(N)
+    for i in range(N):
+        follinf[i] = np.random.choice(range(0,L), p= np.repeat((1/L),L))
+    
+    follinf = follinf.astype('int')
+    followergroups = np.empty((L,0)).tolist()
+    for i in range(N):
+        for j in range(L):
+            if follinf[i] == j:
+                followergroups[j].append(i)
+    
     # network between individuals and influencers
-    C0 = np.zeros((N, L))
-    for i in range(L):
-        C0[follinf[i],i] = 1
+    # one 1 in each row 
+    C0 = np.zeros((N, L)) 
+    #for i in range(L):
+    for i in range(N):
+        for j in range(L):
+            if follinf[i] == j:
+                C0[i,j] = 1
+            
+       # C0[follinf[i] == j] = 1
 
     # initial opinion of influencer is given by the average opinion 
     # of the individuals that follow them 
     z0 = np.zeros((L,2))
     for i in range(L):
-        if len(follinf[i])>0:
-            z0[i,:] = x0[follinf[i]].sum(axis = 0)/len(follinf[i])
+        if len(followergroups[i])>0:
+            z0[i,:] = x0[followergroups[i]].sum(axis = 0)/len(followergroups[i])
 
     # randomly assign media to individuals
     B = np.zeros((N, M))
@@ -64,6 +79,7 @@ def initialcondition(N: int, seed: int = 0):
 
     #initialize influencer network
     D = np.ones((L,L))-np.diag(np.ones(L)) ##
+    
     return x0, y0, z0, A, B, C0, D ##
 
 
@@ -122,7 +138,7 @@ class opinions:
         self.b = b 
         self.c = 1 - self.a - self.b ##
         self.d = d
-        self.e = e
+        self.e = 1 - self.d
 
         self.sigma = sigma 
         self.sigmahat = sigmahat 
@@ -146,6 +162,12 @@ class opinions:
             "The shape of the matrix B should be N x M."
         assert np.shape(self.C0) == (self.N, self.L), \
             "The shape of the matrix C should be N x L."
+            
+        if a + b > 1:
+            print("a+b is larger than 1")
+            a = a / (a+b)
+            b = b / (a+b)
+            
 
     def phi(self, x):
         return 1 / ( 1 + np.exp( self.zeta * ( x - self.theta ) ) ) - 0.5 
@@ -324,3 +346,41 @@ class opinions:
                 writer.append_data(imageio.imread(framespath+name.format(i=index)))
 
 
+imgpath = "img"
+framespath = "img/frames" 
+
+# parameters
+N = 250 # number of individuals
+L=4 
+timesteps = 500 # time steps to simulate with a stepsize of dt ##350
+a = 0.5 ##1.5
+b = 0. ##
+##c = 0.5
+theta = 1.5
+seed = 1 # seed for random number generator
+
+# sample initial condition
+x0,y0,z0,A,B,C0,D = initialcondition(N,L, seed=seed)
+
+a_arr = np.linspace(0,1,1)
+theta_arr = np.array([0.5])#, 1.0, 1.5, 2.0])
+params_sensitivity = {"a": a_arr, "theta": theta_arr}
+
+for param_key in params_sensitivity:
+    for param in params_sensitivity[param_key]:
+        #instantiate model with initial condition and parameters
+        if param_key == "a":
+            ops = opinions(x0, y0, z0, A, B, C0,D, b=b, theta=theta, a=param) #c=c,
+        elif param_key == "theta":
+            ops = opinions(x0, y0, z0, A, B, C0,D, b=b, a=a, theta=param) #c=c,
+            break ##
+
+        #evolve model
+        xs,ys,zs,Cs = ops.run(timesteps=timesteps, seed=seed)
+
+        # plot a snapshot
+        ops.plotsnapshot(xs[-1],ys[-1],zs[-1],B,Cs[-1],save=True,path=imgpath)
+
+        # make gif
+        ops.makegif(xs,ys,zs,Cs,stepsize=10,gifpath=imgpath, framespath=framespath)
+        break
