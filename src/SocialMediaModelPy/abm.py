@@ -234,6 +234,11 @@ class opinions:
         x[ind1] = self.domain[0,1]
         x[ind2] = self.domain[0,0]
 
+        ind1 = np.where(z>self.domain[0,1])  
+        ind2 = np.where(z<self.domain[0,0])
+        z[ind1] = self.domain[0,1]
+        z[ind2] = self.domain[0,0]
+
         # individuals may change the influencer they are interacting with
         C = self.changeinfluencer(C,  x, z)
 

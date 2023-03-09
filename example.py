@@ -4,6 +4,16 @@ import multiprocessing
 import time
 import matplotlib.pyplot as plt
 
+def rungif(a=0.5, theta_ind=0.5, theta_inf=0.5, level_off=False, seed=1):
+    # sample initial condition
+    x0,z0,A,C0,D = abm.initialcondition(N, L=4, seed=seed)
+
+    ops = abm.opinions(x0, z0, A, C0, D=D, theta_ind=theta_ind, theta_inf=theta_inf, a=a,level_off=level_off) 
+
+    xs,zs,Cs = ops.run(timesteps=timesteps, seed=seed)
+
+    # make gif
+    ops.makegif(xs,zs,Cs,stepsize=10,gifpath=imgpath, framespath=framespath)
 
 def run_model(args):
     x0, z0, A, C0, D, theta_ind, theta_inf, a, timesteps, seed = args 
@@ -29,9 +39,7 @@ if __name__ == "__main__":
     # parameters
     N = 250 # number of individuals
     timesteps = 500 # time steps to simulate with a stepsize of dt ##350
-    a = 0.5 ##1.5
-    b = 0. ##
-    ##c = 0.5
+    a = 0.5 
     theta_ind = 1.5
     theta_inf = 1.5
 
