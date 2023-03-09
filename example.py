@@ -34,8 +34,9 @@ if __name__ == "__main__":
     ##c = 0.5
     theta_ind = 1.5
     theta_inf = 0.5
+    L = 4 # number of influencers
 
-    num_simulations = 2 ##
+    num_simulations = 50 ##
     seeds = np.arange(num_simulations) # seed for random number generator
     stop_time_points = [250, 500] ##
 
@@ -60,7 +61,8 @@ if __name__ == "__main__":
                 items_block = np.concatenate([items_block, np.array([[x0,z0,A,C0,D]] * len_param)], axis=0)
 
             if i == 0:
-                domain = abm.opinions(x0, z0, A, C0, D=D).domain
+                model = abm.opinions(x0, z0, A, C0, D=D)
+                domain = model.domain
         
         if param_key == "a":
             items = np.concatenate(
@@ -104,7 +106,7 @@ if __name__ == "__main__":
                 plt.figure(figsize=(12,8))
                 #_, _, _, im1 = plt.hist2d(np.sum(xs_arr, axis=0)[:,0], np.sum(xs_arr, axis=0)[:,1], bins = 20, range = domain)
                 #np.sum([plt.hist2d(xs_arr[i][:,0], xs_arr[i][:,1], bins = 20, range = domain)[0] for i in range(num_simulations)])
-                hist_matrix = np.sum([plt.hist2d(xs_arr[i][:,0], xs_arr[i][:,1], bins = 20, range = domain)[0] for i in range(num_simulations)], axis=0)
+                hist_matrix = np.mean([plt.hist2d(xs_arr[i][:,0], xs_arr[i][:,1], bins = 20, range = domain)[0] for i in range(num_simulations)], axis=0)
                 im1 = plt.imshow(hist_matrix)
                 cbar = plt.colorbar(im1)
                 plt.savefig(imgpath+"/histogram_x_time_point_{0}_param_{1}_param_idx_{2}.png".format(time_point, param_key, param_idx))
@@ -112,7 +114,7 @@ if __name__ == "__main__":
 
                 plt.figure(figsize=(12,8))
                 plt.figure(figsize=(12,8))
-                hist_matrix = np.sum([plt.hist2d(zs_arr[i][:,0], zs_arr[i][:,1], bins = 20, range = domain)[0] for i in range(num_simulations)], axis=0)
+                hist_matrix = np.mean([plt.hist2d(zs_arr[i][:,0], zs_arr[i][:,1], bins = 20, range = domain)[0] for i in range(num_simulations)], axis=0)
                 im2 = plt.imshow(hist_matrix)
                 cbar = plt.colorbar(im2)
                 #_, _, _, im2 = plt.hist2d(np.sum(zs_arr, axis=0)[:,0], np.sum(zs_arr, axis=0)[:,1], bins = 20, range = domain)
