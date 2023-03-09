@@ -16,7 +16,7 @@ def rungif(a=0.5, theta_ind=0.5, theta_inf=0.5, level_off=False, seed=1):
     ops.makegif(xs,zs,Cs,stepsize=10,gifpath=imgpath, framespath=framespath)
 
 def run_model(args):
-    x0, z0, A, C0, D, theta_ind, theta_inf, a, timesteps, seed = args 
+    x0, z0, A, C0, D,theta_ind, theta_inf, a, timesteps, seed = args 
     ops = abm.opinions(x0, z0, A, C0, D=D, theta_ind=theta_ind, theta_inf=theta_inf, a=a) 
 
     xs,zs,Cs = ops.run(timesteps=timesteps, seed=seed)
@@ -41,15 +41,16 @@ if __name__ == "__main__":
     timesteps = 500 # time steps to simulate with a stepsize of dt ##350
     a = 0.5 
     theta_ind = 1.5
-    theta_inf = 1.5
+    theta_inf = 0.5
+    L = 4 # number of influencers
 
-    num_simulations = 10 ##
+    num_simulations = 50 ##
     seeds = np.arange(num_simulations) # seed for random number generator
     stop_time_points = [250, 500] ##
 
-    a_arr = np.linspace(0,1,3)
-    theta_ind_arr = np.array([0.5, 1.5, 2.5, 3.5]) #np.array([0.5, 1.0, 1.5, 2.0, 2.5])
-    theta_inf_arr = np.array([0.5, 1.5, 2.5, 3.5])
+    a_arr = np.linspace(0.1,1,3)
+    theta_ind_arr = np.array([0.5, 1.5, 2.5]) #np.array([0.5, 1.0, 1.5, 2.0, 2.5])
+    theta_inf_arr = np.array([0.5, 1.5, 2.5])
 
     param_combinations = [len(a_arr), len(theta_ind_arr), len(theta_inf_arr)]
 
@@ -68,17 +69,17 @@ if __name__ == "__main__":
                 items_block = np.concatenate([items_block, np.array([[x0,z0,A,C0,D]] * len_param)], axis=0)
 
             if i == 0:
-                domain = abm.opinions(x0, z0, A, C0, D=D).domain
+                model = abm.opinions(x0, z0, A, C0, D=D)
+                domain = model.domain
         
         if param_key == "a":
             items = np.concatenate(
                 [
                     items_block, np.array([[theta_ind, theta_inf]] * num_repeat), 
-                    np.array([params_sensitivity[param_key]]*num_simulations).reshape(len_param*num_simulations,1), #np.array([params_sensitivity[param_key].T][:,None] * num_simulations),
+                    np.array([params_sensitivity[param_key]]*num_simulations).reshape(len_param*num_simulations,1), 
                     np.array([[timesteps]] * num_repeat),
                     np.array(list(seeds) * len_param)[:,None]
                 ], axis=1)
-              
         elif param_key == "theta_ind":
             items = np.concatenate(
                 [
@@ -111,14 +112,20 @@ if __name__ == "__main__":
                 zs_arr = np.array([zs[i,param_idx,time_point] for i in range(num_simulations)])
                 
                 plt.figure(figsize=(12,8))
-                _, _, _, im1 = plt.hist2d(np.sum(xs_arr, axis=0)[:,0], np.sum(xs_arr, axis=0)[:,1], bins = 20, range = domain)
+                #_, _, _, im1 = plt.hist2d(np.sum(xs_arr, axis=0)[:,0], np.sum(xs_arr, axis=0)[:,1], bins = 20, range = domain)
+                #np.sum([plt.hist2d(xs_arr[i][:,0], xs_arr[i][:,1], bins = 20, range = domain)[0] for i in range(num_simulations)])
+                hist_matrix = np.mean([plt.hist2d(xs_arr[i][:,0], xs_arr[i][:,1], bins = 20, range = domain)[0] for i in range(num_simulations)], axis=0)
+                im1 = plt.imshow(hist_matrix)
                 cbar = plt.colorbar(im1)
                 plt.savefig(imgpath+"/histogram_x_time_point_{0}_param_{1}_param_idx_{2}.png".format(time_point, param_key, param_idx))
                 plt.close()
 
                 plt.figure(figsize=(12,8))
-                _, _, _, im2 = plt.hist2d(np.sum(zs_arr, axis=0)[:,0], np.sum(zs_arr, axis=0)[:,1], bins = 20, range = domain)
+                plt.figure(figsize=(12,8))
+                hist_matrix = np.mean([plt.hist2d(zs_arr[i][:,0], zs_arr[i][:,1], bins = 20, range = domain)[0] for i in range(num_simulations)], axis=0)
+                im2 = plt.imshow(hist_matrix)
                 cbar = plt.colorbar(im2)
+                #_, _, _, im2 = plt.hist2d(np.sum(zs_arr, axis=0)[:,0], np.sum(zs_arr, axis=0)[:,1], bins = 20, range = domain)
                 plt.savefig(imgpath+"/histogram_z_time_point_{0}_param_{1}_param_idx_{2}.png".format(time_point, param_key, param_idx))
                 plt.close()
     stop = time.time()
