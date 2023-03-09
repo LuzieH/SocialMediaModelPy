@@ -160,6 +160,10 @@ class opinions:
         #P[x>=4] = -1
         #return P
 
+    def phi_level_off(self, x, zeta, theta, omikron):
+        return (1 / (1 + np.exp(zeta * (x - theta))) - 0.5) + \
+            0.5 * (1 / (1 + np.exp(- zeta * (x - (theta + omikron)))))
+
     def attraction(self, weights: np.ndarray, opinions: np.ndarray, neighbourops: np.ndarray) -> np.ndarray:
         """ Constructs the attraction force on individuals with current opinion given by opinion and between other
          agents with opinions given by neighbourops. The weights array gives the corresponding interaction weights 
