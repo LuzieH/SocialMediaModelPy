@@ -22,22 +22,9 @@ def initialcondition(N: int, L: int, seed: int = 0):
 
     np.random.seed(seed)
 
-    # number of media
-    M = 2
-    # number of influencers
-
     # individuals' opinions are uniformly distributed in [-2,2] x [-2,2]
     x0 = np.random.rand(N,2)*4 -2 
-    # media opinions given by (-1,-1) and (1,1)
-    y0 = np.array([[-1., -1.],[1., 1.]])
 
-    # assign each individual to the influencer that is in the
-    # same quadrant of the opinion domain
-    #follinf1 = [i for i in range(N) if x0[i,0]>0 and x0[i,1]>0]   
-    #follinf2 = [i for i in range(N) if x0[i,0]<=0 and x0[i,1]>0]
-    #follinf3 = [i for i in range(N) if x0[i,0]>0 and x0[i,1]<=0]
-    #follinf4 = [i for i in range(N) if x0[i,0]<=0 and x0[i,1]<=0]
-    #follinf = [follinf1, follinf2, follinf3, follinf4]
     follinf = np.zeros(N)
     for i in range(N):
         follinf[i] = np.random.choice(range(0,L), p= np.repeat((1/L),L))
@@ -63,13 +50,6 @@ def initialcondition(N: int, L: int, seed: int = 0):
     # initial opinion of influencer is given by the average opinion 
     # of the individuals that follow them 
     z0 = np.random.rand(L,2)*4 -2
-    
-
-    # randomly assign media to individuals
-    B = np.zeros((N, M))
-    assignedmed = np.random.choice([0,1],N)
-    B[np.where(assignedmed == 0), 0] = 1
-    B[np.where(assignedmed == 1), 1] = 1
 
     # initialization of fully-connected interaction network 
     # between individuals without self-interactions
@@ -78,7 +58,7 @@ def initialcondition(N: int, L: int, seed: int = 0):
     #initialize influencer network
     D = np.ones((L,L))-np.diag(np.ones(L)) ##
     
-    return x0, y0, z0, A, B, C0, D ##
+    return x0, z0, A, C0, D ##
 
 
 
@@ -89,10 +69,10 @@ class opinions:
     Reference: Helfmann, Luzie, et al. "Modelling opinion dynamics under the impact of influencer and 
     media strategies." preprint arXiv:2301.13661 (2023).
     """
-    def __init__(self,  x0: np.ndarray, y0: np.ndarray, z0: np.ndarray, A: np.ndarray, B: np.ndarray, C0: np.ndarray, D: np.ndarray,
-                 a: float=1., b: float=2., d: float = 1/2, e: float = 1/2, sigma: float=0.5, sigmahat: float = 0., sigmatilde: float = 0., gamma: float=10., #c: float=4., 
-                 Gamma: float=100., eta: float = 15., r = lambda x : np.max([0.1,-1+2*x]), #phi = lambda x : np.exp(-x),
-                 psi = lambda x : np.exp(-x), dt: float = 0.01, domain: np.ndarray = np.array([[-2,2],[-2,2]]), 
+    def __init__(self,  x0: np.ndarray, z0: np.ndarray, A: np.ndarray, C0: np.ndarray, D: np.ndarray,
+                 a: float=1., d: float = 1/2, sigma: float=0.5, sigmatilde: float = 0., gamma: float=10., #c: float=4., 
+                 eta: float = 15.,  psi = lambda x : np.exp(-x), dt: float = 0.01, 
+                 domain: np.ndarray = np.array([[-2,2],[-2,2]]), 
                  theta: float = 1.5): ##
         """Construct the model class with the given parameters and initial conditions.
 
@@ -121,31 +101,23 @@ class opinions:
         
         # initial conditions
         self.x0 = x0
-        self.y0 = y0
         self.z0 = z0
         self.A = A
-        self.B = B
         self.C0 = C0
         self.D = D
 
         # model parameters
         self.N = np.size(x0,0)
-        self.M = np.size(y0,0) 
         self.L = np.size(z0,0)
         self.a = a
-        self.b = b 
-        self.c = 1 - self.a - self.b ##
+        self.c = 1 - self.a 
         self.d = d
         self.e = 1 - self.d
 
         self.sigma = sigma 
-        self.sigmahat = sigmahat 
         self.sigmatilde = sigmatilde 
         self.gamma = gamma 
-        self.Gamma = Gamma 
         self.eta = eta 
-        self.r = r 
-        #self.phi = lambda x: self.phi_(x) ##
         self.psi = psi 
         self.dt = dt 
         self.domain = domain
@@ -156,15 +128,12 @@ class opinions:
         # consistency checks
         assert np.shape(self.A) == (self.N, self.N), \
             "The size of the adjacency matrix A does not correspond to the number of individuals N, it should be of the size N x N."
-        assert np.shape(self.B) == (self.N, self.M), \
-            "The shape of the matrix B should be N x M."
         assert np.shape(self.C0) == (self.N, self.L), \
             "The shape of the matrix C should be N x L."
             
-        if a + b > 1:
-            print("a+b is larger than 1")
-            a = a / (a+b)
-            b = b / (a+b)
+        if a > 1:
+            print("a is larger than 1")
+            a = 1
             
 
     def phi(self, x):
@@ -190,17 +159,9 @@ class opinions:
 
         return force
 
-    def changeinfluencer(self, C: np.ndarray, B: np.ndarray, x: np.ndarray, z: np.ndarray) -> np.ndarray:
+    def changeinfluencer(self, C: np.ndarray, x: np.ndarray, z: np.ndarray) -> np.ndarray:
         """ Given the network between individuals and influencers, C, let individuals change their influencer according
         to the specified change rates. Returns the new network. """
-
-        # fraction of individuals following a certain influencer and media
-        fraction = np.zeros((self.M,self.L))
-        for i in range(self.L):
-            for j in range(self.M):
-                fraction[j,i]= B[:,j].dot(C[:,i])/self.N
-        # normalized fraction
-        normfraction = fraction/np.sum(fraction,axis = 0)[np.newaxis,:]
 
         # compute distance of indivdiuals to influencers
         dist = cdist(x,z,'euclidean')
@@ -208,10 +169,9 @@ class opinions:
         
         changerate = np.zeros(self.L)
         for j in range(self.N):
-            m = int(B[j,:].dot(range(self.M))) # index of individual j's medium
             # compute change rate that an individuals has to the different influencers
             for l in range(self.L):
-                changerate[l] = self.eta * wdist[j,l] * self.r(normfraction[m,l]) 
+                changerate[l] = self.eta * wdist[j,l] 
 
             # check whether the influencer is changed    
             r1 = np.random.rand() 
@@ -224,20 +184,12 @@ class opinions:
                 C[j,l] = 1
         return C
             
-    def iter(self, x: np.ndarray, y: np.ndarray, z: np.ndarray, C: np.ndarray):
+    def iter(self, x: np.ndarray, z: np.ndarray, C: np.ndarray):
         """ One iteration with step size dt of the opinion model. """
-
-        # media opinions change very slowly based on opinions of followers with friction
-        for m in range(self.M):
-            Nfoll = np.sum(self.B[:,m])
-            if  Nfoll>0:
-                averageopinion = self.B[:,m].dot(x)/Nfoll # of followers
-                # Euler Mayurama discretization of the SDE
-                y[m,:] = y[m,:]  + (self.dt * (averageopinion - y[m,:]) + np.sqrt(self.dt)*self.sigmahat*np.random.randn(2))/self.Gamma
 
         # opinions change due to attracting opinions of friends, influencers and media
         weights = np.multiply(self.A, self.phi(squareform(pdist(x,'euclidean')))) # multiply A and phi entries element-wise
-        force = self.a* self.attraction(weights, x, x) + self.b* self.attraction(self.B, x, y) + self.c* self.attraction(C, x, z)
+        force = self.a* self.attraction(weights, x, x) + self.c* self.attraction(C, x, z)
         
         #opinion changes of influencers in the direction of average follower and with attraction-repulsion to other influencers
         weights_inf = np.multiply(self.D,self.phi(squareform(pdist(z,'euclidean')))) # multiply D and phi entries element-wise; define earlier? 
@@ -255,9 +207,9 @@ class opinions:
         x[ind2] = self.domain[0,0]
 
         # individuals may change the influencer they are interacting with
-        C = self.changeinfluencer(C, self.B, x, z)
+        C = self.changeinfluencer(C,  x, z)
 
-        return x,y,z,C
+        return x,z,C
     
     def run(self,timesteps: int = 200, seed: int=0):
         """Simulation of the opinion model for several time steps.
@@ -276,23 +228,20 @@ class opinions:
         np.random.seed(seed)
         x=self.x0.copy()
         xs = [x.copy()]
-        y=self.y0.copy()
-        ys = [y.copy()]
         z=self.z0.copy()
         zs = [z.copy()]
         C = self.C0.copy()
         Cs = [C.copy()]
 
         for t in range(timesteps):
-            x,y,z,C = self.iter(x,y,z,C)
+            x,z,C = self.iter(x,z,C)
             xs.append(x.copy())
-            ys.append(y.copy())
             zs.append(z.copy())
             Cs.append(C.copy())
 
-        return xs,ys,zs,Cs  
+        return xs,zs,Cs  
 
-    def plotsnapshot(self, x: np.ndarray, y: np.ndarray, z: np.ndarray, B: np.ndarray, C: np.ndarray, 
+    def plotsnapshot(self, x: np.ndarray, z: np.ndarray, C: np.ndarray, 
                      path: str ="", title: str="", save: bool = False,name: str = "/snapshot.jpg"): ##
         """Plots a given snapshot of the opinion dynamics as specified by the state (x,y,z,B,C)."""
 
@@ -301,19 +250,14 @@ class opinions:
         colors = ["#44AA99","#DDCC77","#CC6677","#88CCEE", "#9467bd", "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf"]
         if np.size(colors)<self.L:
             "There are not enough colors specified for the number of influencers."
-        markers = ["o", "^", "D", "+"]
-        if np.size(markers)<self.M:
-            "There are not enough markers specified for the number of media."
         
         for l in range(self.L):
-            for m in range(self.M):
-                indices = np.where(B[:,m]*C[:,l]==1) # of individuals that are attached to influencer l and medium m
-                ax.scatter(x[indices,0],x[indices,1], c=colors[l], marker = markers[m], s = 25,alpha=0.8)
+            indices = np.where(C[:,l]==1) # of individuals that are attached to influencer l and medium m
+            ax.scatter(x[indices,0],x[indices,1], c=colors[l],  s = 25,alpha=0.8)
         
         for l in range(self.L):
             ax.scatter(z[l,0], z[l,1],c=colors[l], s = 50, edgecolor='k')
-        for m in range(self.M):
-            ax.scatter(y[m,0], y[m,1],marker = markers[m], c='k', s = 50)
+
 
         plt.xlim(self.domain[0,:])
         plt.ylim(self.domain[1,:])
@@ -324,7 +268,7 @@ class opinions:
 
         plt.close()
     
-    def makegif(self, xs: np.ndarray, ys: np.ndarray, zs: np.ndarray, Cs: np.ndarray, gifpath: str="", framespath: str="", 
+    def makegif(self, xs: np.ndarray,  zs: np.ndarray, Cs: np.ndarray, gifpath: str="", framespath: str="", 
                 stepsize: int = 5, fps: int = 5): ##
         """ Makes a gif of the realization specified by (xs,ys,zs,Cs,B), the frames for the gif are safed in framespath while the 
         final gif is stored under gifpath+name."""
@@ -337,13 +281,13 @@ class opinions:
         times = range(0,np.size(xs,0),stepsize)
 
         for index, t in enumerate(times):
-            self.plotsnapshot(xs[t], ys[t], zs[t], self.B, Cs[t],title="t = "+str(np.round(self.dt*t,2)),save=True, path = framespath, name = name.format(i=index))
+            self.plotsnapshot(xs[t],  zs[t], Cs[t],title="t = "+str(np.round(self.dt*t,2)),save=True, path = framespath, name = name.format(i=index))
  
         with imageio.get_writer(gifpath , mode='I',fps = fps) as writer:
             for index, t in enumerate(times):
                 writer.append_data(imageio.imread(framespath+name.format(i=index)))
 
-
+""" 
 imgpath = "img"
 framespath = "img/frames" 
 
@@ -381,4 +325,4 @@ for param_key in params_sensitivity:
 
         # make gif
         ops.makegif(xs,ys,zs,Cs,stepsize=10,gifpath=imgpath, framespath=framespath)
-        break
+        break """
