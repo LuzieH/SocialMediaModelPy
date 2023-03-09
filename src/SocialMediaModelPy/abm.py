@@ -120,7 +120,6 @@ class opinions:
         self.L = np.size(z0,0)
         self.a = a
         self.b = b 
-        ## add error 
         self.c = 1 - self.a - self.b ##
         self.d = d
         self.e = e
@@ -132,7 +131,7 @@ class opinions:
         self.Gamma = Gamma 
         self.eta = eta 
         self.r = r 
-        self.phi = lambda x: self.phi_(x) ##
+        #self.phi = lambda x: self.phi_(x) ##
         self.psi = psi 
         self.dt = dt 
         self.domain = domain
@@ -148,22 +147,28 @@ class opinions:
         assert np.shape(self.C0) == (self.N, self.L), \
             "The shape of the matrix C should be N x L."
 
-    def phi_(self, x): ##
-        return 1 / ( 1 + np.exp( self.zeta * ( x - self.theta ) ) ) - 0.5 ##
+    def phi(self, x):
+        #return 1 / ( 1 + np.exp( self.zeta * ( x - self.theta ) ) ) - 0.5 
+        #return np.exp(-0.5*x)-0.2
+        P = np.zeros(np.shape(x))
+        P[x<=0.8] = 1
+        P[x>=4] = -1
+        return P
 
     def attraction(self, weights: np.ndarray, opinions: np.ndarray, neighbourops: np.ndarray) -> np.ndarray:
         """ Constructs the attraction force on individuals with current opinion given by opinion and between other
          agents with opinions given by neighbourops. The weights array gives the corresponding interaction weights 
          between each individual and each agent. Returns the force."""
 
-        #force = np.zeros((self.N,2))
         weightssum = np.sum(abs(weights), axis=1)
-        #force = weights.dot(neighbourops)/weightssum[:,np.newaxis]
-        force = weights.dot(neighbourops)/weightssum[:,np.newaxis] ##
-        # the force is zero in case an individual is not interacting with any other agent
-        force[weightssum == 0, :] = 0 ##weightssum
+        weight1 =  weights/weightssum[:,np.newaxis]
+        weight2 = np.divide(np.sum(weights, axis=1),weightssum)
+        force = weight1.dot(neighbourops) - np.multiply(weight2[:,np.newaxis],opinions)
 
-        return force-opinions
+        # the force is zero in case an individual is not interacting with any other agent
+        force[weightssum == 0, :] = 0 
+
+        return force
 
     def changeinfluencer(self, C: np.ndarray, B: np.ndarray, x: np.ndarray, z: np.ndarray) -> np.ndarray:
         """ Given the network between individuals and influencers, C, let individuals change their influencer according
@@ -210,17 +215,11 @@ class opinions:
                 # Euler Mayurama discretization of the SDE
                 y[m,:] = y[m,:]  + (self.dt * (averageopinion - y[m,:]) + np.sqrt(self.dt)*self.sigmahat*np.random.randn(2))/self.Gamma
 
-        # influencer opinions adapt slowly to opinions of followers with friction
-        for l in range(self.L):
-            Nfoll = np.sum(C[:,l])
-            if  Nfoll>0:
-                averageopinion = C[:,l].dot(x)/Nfoll # of follwers
-                z[l,:] = z[l,:]  + (self.dt * (averageopinion - z[l,:]) + np.sqrt(self.dt)*self.sigmatilde*np.random.randn(2))/self.gamma    
-
         # opinions change due to attracting opinions of friends, influencers and media
         weights = np.multiply(self.A, self.phi(squareform(pdist(x,'euclidean')))) # multiply A and phi entries element-wise
         force = self.a* self.attraction(weights, x, x) + self.b* self.attraction(self.B, x, y) + self.c* self.attraction(C, x, z)
-         
+        
+        #opinion changes of influencers in the direction of average follower and with attraction-repulsion to other influencers
         weights_inf = np.multiply(self.D,self.phi(squareform(pdist(z,'euclidean')))) # multiply D and phi entries element-wise; define earlier? 
         force_inf = self.e*self.attraction(C.T,z,x) + self.d*self.attraction(weights_inf, z, z) #define earlier?
         
