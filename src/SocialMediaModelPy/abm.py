@@ -148,12 +148,12 @@ class opinions:
             "The shape of the matrix C should be N x L."
 
     def phi(self, x):
-        #return 1 / ( 1 + np.exp( self.zeta * ( x - self.theta ) ) ) - 0.5 
+        return 1 / ( 1 + np.exp( self.zeta * ( x - self.theta ) ) ) - 0.5 
         #return np.exp(-0.5*x)-0.2
-        P = np.zeros(np.shape(x))
-        P[x<=0.8] = 1
-        P[x>=4] = -1
-        return P
+        #P = np.zeros(np.shape(x))
+        #P[x<=0.8] = 1
+        #P[x>=4] = -1
+        #return P
 
     def attraction(self, weights: np.ndarray, opinions: np.ndarray, neighbourops: np.ndarray) -> np.ndarray:
         """ Constructs the attraction force on individuals with current opinion given by opinion and between other
