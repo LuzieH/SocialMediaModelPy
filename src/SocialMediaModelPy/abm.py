@@ -9,15 +9,17 @@ def initialcondition(N: int, L: int, seed: int = 0):
 
     Keyword arguments:
     N -- number of individuals (int)
+    L -- number of influencers (int)
     seed -- seed for the random number generator (int)
 
     Returns:
     x0 -- initial 2D opinions of N individuals (np.ndarray N x 2)
-    y0 -- initial 2D opinions of M = 2 media (np.ndarray 2 x 2)
-    z0 -- initial 2D opinions of L = 4 influencers (np.ndarray 4 x 2)
+    y0 -- initial 2D opinions of M media (np.ndarray M x 2)
+    z0 -- initial 2D opinions of L influencers (np.ndarray L x 2)
     A -- adjacency matrix of the network between individuals (np.ndarray N x N)
-    B -- adjacency matrix of the network between individuals and media (np.ndarray N x 2)
-    C0 -- initial adjacency matrix of the network between individuals and influencers (np.ndarray N x 4)   
+    B -- adjacency matrix of the network between individuals and media (np.ndarray N x M)
+    C0 -- initial adjacency matrix of the network between individuals and influencers (np.ndarray N x L)   
+    D -- adjacency matrix of the network between influencers (np.ndarray L x L)
     """
 
     if L!=4:
@@ -89,6 +91,7 @@ class opinions:
         A -- adjacency matrix of the network between individuals (np.ndarray N x N)
         B -- adjacency matrix of the network between individuals and media (np.ndarray N x M)
         C0 -- initial adjacency matrix of the network between individuals and influencers (np.ndarray N x L)
+        D -- adjacency matrix of the network between influencers (np.ndarray L x L)
         a -- interaction strength between individuals (float)
         b -- interaction strength of media on individuals (float)
         c -- interaction strenght of influencers on individuals (float)
@@ -99,7 +102,10 @@ class opinions:
         Gamma -- inertia parameter of media (float, >=1)
         eta -- rate constant of switching influencers (float, >0)
         r -- recommender system function (function)
-        phi -- pairwise interaction function between individuals (function)
+        theta_ind -- interaction threshold between individuals (float, >0)
+        theta_inf -- interaction threshold between influencers (float, >0)
+        phi_ind -- pairwise interaction function between individuals (function)
+        phi_inf -- pairwise interaction function between influencers (function)
         psi -- pairwise function when individuals evaluate the suitability of influencers (function)
         dt -- time step size (float, >=0)
         domain -- 2D opinion domain (np.ndarray 2 x 2) assumed to be square
