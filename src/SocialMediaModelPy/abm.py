@@ -20,10 +20,17 @@ def initialcondition(N: int, L: int, seed: int = 0):
     C0 -- initial adjacency matrix of the network between individuals and influencers (np.ndarray N x 4)   
     """
 
+    if L!=4:
+        print("The initial condition only works for L=4")
+
     np.random.seed(seed)
 
     # individuals' opinions are uniformly distributed in [-2,2] x [-2,2]
-    x0 = np.random.rand(N,2)*4 -2 
+    x0 = np.array([[-1.237304  , -0.88463197],
+       [ 0.59117453,  1.29053742],
+       [ 0.64113249, -0.30845413],
+       [-0.65820039, -1.00763623]])
+    #np.random.rand(N,2)*4 -2 
 
     follinf = np.zeros(N)
     for i in range(N):
@@ -49,7 +56,7 @@ def initialcondition(N: int, L: int, seed: int = 0):
 
     # initial opinion of influencer is given by the average opinion 
     # of the individuals that follow them 
-    z0 = np.random.rand(L,2)*4 -2
+    z0 = np.array([[],[],[],[]])#np.random.rand(L,2)*4 -2
 
     # initialization of fully-connected interaction network 
     # between individuals without self-interactions
