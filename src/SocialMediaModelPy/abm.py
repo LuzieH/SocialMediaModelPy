@@ -62,10 +62,8 @@ def initialcondition(N: int, L: int, seed: int = 0):
 
     # initial opinion of influencer is given by the average opinion 
     # of the individuals that follow them 
-    z0 = np.zeros((L,2))
-    for i in range(L):
-        if len(followergroups[i])>0:
-            z0[i,:] = x0[followergroups[i]].sum(axis = 0)/len(followergroups[i])
+    z0 = np.random.rand(L,2)*4 -2
+    
 
     # randomly assign media to individuals
     B = np.zeros((N, M))
