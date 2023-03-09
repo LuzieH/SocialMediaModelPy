@@ -78,12 +78,11 @@ class opinions:
     media strategies." preprint arXiv:2301.13661 (2023).
     """
     def __init__(self,  x0: np.ndarray, z0: np.ndarray, A: np.ndarray, C0: np.ndarray, D: np.ndarray,
-                 a: float=1., d: float = 1/2, sigma: float=0.5, sigmatilde: float = 0., gamma: float=10., #c: float=4., 
+                 a: float=0.5, d: float = 0.5, sigma: float=0.1, sigmatilde: float = 0.1, gamma: float=10., #c: float=4., 
                  eta: float = 15.,  psi = lambda x : np.exp(-x), dt: float = 0.01, 
                  domain: np.ndarray = np.array([[-2,2],[-2,2]]), 
-                 theta_ind: float = 1.5, theta_inf: float = 0.5,
-                 level_off: bool = False,
-                 omikron_ind: float = 3.0, omikron_inf: float = 3.0): ##
+                 theta_ind: float = 1.5, theta_inf: float = 1.5,
+                 level_off: bool = False, omikron_ind: float = 3.0, omikron_inf: float = 3.0): ##
         """Construct the model class with the given parameters and initial conditions.
 
         Keyword arguments:

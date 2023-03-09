@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 
 def run_model(args):
-    x0, z0, A, C0, D,theta_ind, theta_inf, a, timesteps, seed = args 
+    x0, z0, A, C0, D, theta_ind, theta_inf, a, timesteps, seed = args 
     ops = abm.opinions(x0, z0, A, C0, D=D, theta_ind=theta_ind, theta_inf=theta_inf, a=a) 
 
     xs,zs,Cs = ops.run(timesteps=timesteps, seed=seed)
@@ -33,15 +33,15 @@ if __name__ == "__main__":
     b = 0. ##
     ##c = 0.5
     theta_ind = 1.5
-    theta_inf = 0.5
+    theta_inf = 1.5
 
     num_simulations = 10 ##
     seeds = np.arange(num_simulations) # seed for random number generator
     stop_time_points = [250, 500] ##
 
-    a_arr = np.linspace(0.1,1,3)
-    theta_ind_arr = np.array([0.5, 1.5, 2.5]) #np.array([0.5, 1.0, 1.5, 2.0, 2.5])
-    theta_inf_arr = np.array([0.5, 1.5, 2.5])
+    a_arr = np.linspace(0,1,3)
+    theta_ind_arr = np.array([0.5, 1.5, 2.5, 3.5]) #np.array([0.5, 1.0, 1.5, 2.0, 2.5])
+    theta_inf_arr = np.array([0.5, 1.5, 2.5, 3.5])
 
     param_combinations = [len(a_arr), len(theta_ind_arr), len(theta_inf_arr)]
 
