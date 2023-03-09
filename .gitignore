@@ -9,3 +9,7 @@ img/
 
 # compiled Python files
 src/SocialMediaModelPy/__pycache__
+
+.idea
+
+SocialMediaModelPy.egg-info
