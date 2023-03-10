@@ -303,11 +303,14 @@ class opinions:
 
 
     def makegif(self, xs: np.ndarray,  zs: np.ndarray, Cs: np.ndarray, gifpath: str="", framespath: str="",
-                stepsize: int = 5, fps: int = 5): ##
+                gifname: str="", stepsize: int = 5, fps: int = 5): ##
         """ Makes a gif of the realization specified by (xs,ys,zs,Cs,B), the frames for the gif are safed in framespath while the
         final gif is stored under gifpath+name."""
 
-        name = "/realization.gif"#
+        if gifname == "":
+            name = "/realization.gif"#
+        else:
+            name = gifname
         gifpath = gifpath+name
         framespath = framespath
         name = "/{i}.jpg" ##
